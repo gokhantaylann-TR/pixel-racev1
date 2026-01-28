@@ -1,174 +1,219 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-Bit Retro Racer</title>
-    <style>
-        body {
-            margin: 0;
-            background: #222;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden;
-        }
-        canvas {
-            border: 4px solid #fff;
-            background: #444;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-        .ui {
-            position: absolute;
-            top: 20px;
-            text-align: center;
-            pointer-events: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8-Bit Retro Racer</title>
+
+<style>
+body {
+    margin: 0;
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+}
+
+canvas {
+    border: 4px solid #fff;
+    background: #444;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.ui {
+    position: absolute;
+    top: 20px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.brand {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.brand .title {
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.brand .author {
+    font-size: 10px;
+    opacity: 0.8;
+}
+</style>
 </head>
+
 <body>
 
-    <div class="ui">
-        <h1 id="score">SKOR: 0</h1>
-        <p id="msg">BAŞLAMAK İÇİN TIKLA (Yön Tuşlarını Kullan)</p>
-    </div>
-    <canvas id="gameCanvas"></canvas>
+<div class="ui">
+    <h1 id="score">SKOR: 0</h1>
+    <p id="msg">BAŞLAMAK İÇİN TIKLA<br>← → ↑ ↓ | P: PAUSE</p>
+</div>
+
+<div class="brand">
+    <div class="title">MAT GAMES</div>
+    <div class="author">by gokhantaylan</div>
+</div>
+
+<canvas id="gameCanvas"></canvas>
 
 <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreElement = document.getElementById("score");
-    const msgElement = document.getElementById("msg");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreElement = document.getElementById("score");
+const msgElement = document.getElementById("msg");
 
-    canvas.width = 400;
-    canvas.height = 600;
+canvas.width = 400;
+canvas.height = 600;
 
-    // Oyun Değişkenleri
-    let gameRunning = false;
-    let score = 0;
-    let speed = 5;
-    let frame = 0;
+// ===== OYUN DURUMU =====
+let gameRunning = false;
+let paused = false;
+let score = 0;
+let speed = 5;
+let frame = 0;
 
-    const player = {
-        x: canvas.width / 2 - 20,
-        y: canvas.height - 100,
-        w: 40,
-        h: 70,
-        color: "#e74c3c"
-    };
+const player = {
+    x: canvas.width / 2 - 20,
+    y: canvas.height - 120,
+    w: 40,
+    h: 70,
+    color: "#e74c3c"
+};
 
-    let enemies = [];
-    let keys = {};
+let enemies = [];
+let keys = {};
 
-    // Kontroller
-    window.addEventListener("keydown", e => keys[e.code] = true);
-    window.addEventListener("keyup", e => keys[e.code] = false);
-    canvas.addEventListener("click", () => {
-        if (!gameRunning) resetGame();
-    });
+// ===== KONTROLLER =====
+window.addEventListener("keydown", e => {
+    keys[e.code] = true;
 
-    function resetGame() {
-        score = 0;
-        speed = 5;
-        enemies = [];
-        player.x = canvas.width / 2 - 20;
-        gameRunning = true;
-        msgElement.innerText = "";
-        update();
+    if (e.code === "KeyP" && gameRunning) {
+        paused = !paused;
+        msgElement.innerText = paused ? "PAUSE" : "";
+        if (!paused) update();
     }
+});
 
-    function spawnEnemy() {
-        if (frame % 60 === 0) {
-            const x = Math.random() * (canvas.width - 40);
-            enemies.push({ x, y: -70, w: 40, h: 70, color: "#3498db" });
-        }
+window.addEventListener("keyup", e => keys[e.code] = false);
+
+canvas.addEventListener("click", () => {
+    if (!gameRunning) resetGame();
+});
+
+// ===== OYUN FONKSİYONLARI =====
+function resetGame() {
+    score = 0;
+    speed = 5;
+    frame = 0;
+    enemies = [];
+    paused = false;
+    player.x = canvas.width / 2 - 20;
+    player.y = canvas.height - 120;
+    gameRunning = true;
+    msgElement.innerText = "";
+    update();
+}
+
+function spawnEnemy() {
+    if (frame % 60 === 0) {
+        const laneWidth = canvas.width / 3;
+        const lane = Math.floor(Math.random() * 3);
+        const x = lane * laneWidth + laneWidth / 2 - 20;
+        enemies.push({ x, y: -80, w: 40, h: 70, color: "#3498db" });
     }
+}
 
-    function drawRect(obj) {
-        // 8-bit gövde
-        ctx.fillStyle = obj.color;
-        ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-        
-        // Tekerlekler (Siyah küçük kareler)
-        ctx.fillStyle = "#000";
-        ctx.fillRect(obj.x - 5, obj.y + 10, 5, 15);
-        ctx.fillRect(obj.x + obj.w, obj.y + 10, 5, 15);
-        ctx.fillRect(obj.x - 5, obj.y + 45, 5, 15);
-        ctx.fillRect(obj.x + obj.w, obj.y + 45, 5, 15);
+function drawCar(obj) {
+    ctx.fillStyle = obj.color;
+    ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
 
-        // Cam
-        ctx.fillStyle = "#ecf0f1";
-        ctx.fillRect(obj.x + 5, obj.y + 15, obj.w - 10, 15);
-    }
+    ctx.fillStyle = "#000";
+    ctx.fillRect(obj.x - 5, obj.y + 10, 5, 15);
+    ctx.fillRect(obj.x + obj.w, obj.y + 10, 5, 15);
+    ctx.fillRect(obj.x - 5, obj.y + 45, 5, 15);
+    ctx.fillRect(obj.x + obj.w, obj.y + 45, 5, 15);
 
-    function drawRoad() {
-        ctx.fillStyle = "#555";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Şerit çizgileri
-        ctx.strokeStyle = "#fff";
-        ctx.setLineDash([20, 20]);
-        ctx.lineDashOffset = -frame * speed;
+    ctx.fillStyle = "#ecf0f1";
+    ctx.fillRect(obj.x + 5, obj.y + 15, obj.w - 10, 18);
+}
+
+function drawRoad() {
+    ctx.fillStyle = "#555";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = "#fff";
+    ctx.setLineDash([20, 20]);
+    ctx.lineDashOffset = -frame * speed;
+
+    for (let i = 1; i <= 2; i++) {
         ctx.beginPath();
-        ctx.moveTo(canvas.width / 2, 0);
-        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.moveTo((canvas.width / 3) * i, 0);
+        ctx.lineTo((canvas.width / 3) * i, canvas.height);
         ctx.stroke();
     }
+}
 
-    function update() {
-        if (!gameRunning) return;
+function update() {
+    if (!gameRunning || paused) return;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        frame++;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame++;
 
-        drawRoad();
-
-        // Oyuncu Hareketi
-        if (keys["ArrowLeft"] && player.x > 0) player.x -= 7;
-        if (keys["ArrowRight"] && player.x < canvas.width - player.w) player.x += 7;
-
-        drawRect(player);
-
-        // Düşman Arabalar
-        spawnEnemy();
-        enemies.forEach((enemy, index) => {
-            enemy.y += speed;
-            drawRect(enemy);
-
-            // Çarpışma Kontrolü
-            if (
-                player.x < enemy.x + enemy.w &&
-                player.x + player.w > enemy.x &&
-                player.y < enemy.y + enemy.h &&
-                player.y + player.h > enemy.y
-            ) {
-                gameOver();
-            }
-
-            // Skor ve Temizlik
-            if (enemy.y > canvas.height) {
-                enemies.splice(index, 1);
-                score++;
-                scoreElement.innerText = `SKOR: ${score}`;
-                if (score % 10 === 0) speed += 0.2; // Zorluk artışı
-            }
-        });
-
-        requestAnimationFrame(update);
-    }
-
-    function gameOver() {
-        gameRunning = false;
-        msgElement.innerText = "OYUN BİTTİ! TEKRARLAMAK İÇİN TIKLA";
-    }
-
-    // İlk kareyi çiz
     drawRoad();
-    drawRect(player);
 
+    // ===== OYUNCU HAREKETİ (4 YÖN) =====
+    if (keys["ArrowLeft"] && player.x > 0) player.x -= 7;
+    if (keys["ArrowRight"] && player.x < canvas.width - player.w) player.x += 7;
+    if (keys["ArrowUp"] && player.y > 0) player.y -= 6;
+    if (keys["ArrowDown"] && player.y < canvas.height - player.h) player.y += 6;
+
+    drawCar(player);
+
+    spawnEnemy();
+
+    enemies.forEach((enemy, i) => {
+        enemy.y += speed;
+        drawCar(enemy);
+
+        // ÇARPIŞMA
+        if (
+            player.x < enemy.x + enemy.w &&
+            player.x + player.w > enemy.x &&
+            player.y < enemy.y + enemy.h &&
+            player.y + player.h > enemy.y
+        ) {
+            gameOver();
+        }
+
+        if (enemy.y > canvas.height) {
+            enemies.splice(i, 1);
+            score++;
+            scoreElement.innerText = "SKOR: " + score;
+            if (score % 10 === 0) speed += 0.3;
+        }
+    });
+
+    requestAnimationFrame(update);
+}
+
+function gameOver() {
+    gameRunning = false;
+    msgElement.innerText = "OYUN BİTTİ\nTEKRAR OYNAMAK İÇİN TIKLA";
+}
+
+// İlk çizim
+drawRoad();
+drawCar(player);
 </script>
+
 </body>
 </html>

@@ -88,13 +88,13 @@
         } else if (gain) gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
     }
 
-    // --- ÇİZİM MOTORU (DETAYLI GRAFİKLER) ---
+    // --- ÇİZİM MOTORU ---
     function drawPixelCar(car) {
         const { x, y, w, h, model } = car;
-        
+
         // Gölge
-        ctx.fillStyle = "rgba(0,0,0,0.4)";
-        ctx.fillRect(x + 4, y + 10, w, h);
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(x + 4, y + 12, w, h * 0.9);
 
         const drawPart = (color, rx, ry, rw, rh) => {
             ctx.fillStyle = color;
@@ -104,8 +104,7 @@
         if (model === MODELS.SKYLINE) {
             drawPart("#95a5a6", 2, 0, w-4, h);
             drawPart("#bdc3c7", 4, 2, w-8, h-10);
-            drawPart("#2980b9", 10, 0, 5, h-4);
-            drawPart("#2980b9", w-15, 0, 5, h-4);
+            drawPart("#2980b9", 10, 0, 5, h-4); drawPart("#2980b9", w-15, 0, 5, h-4);
             drawPart("#2c3e50", 6, 20, w-12, 18);
             drawPart("#34495e", 8, 22, w-16, 12);
             drawPart("#7f8c8d", 0, h-8, w, 5);
@@ -139,10 +138,21 @@
             drawPart("#fff", 6, 22, w-12, 3);
         }
 
+        // Tekerlek animasyonu
+        const wheelPhase = (frame * 4) % 16;
         ctx.fillStyle = "#000";
-        [12, h-22].forEach(ty => { 
-            ctx.fillRect(x-2, y+ty, 4, 16); ctx.fillRect(x+w-2, y+ty, 4, 16); 
+        [[12, h-22], [12, 12]].forEach(([rx, ry]) => {
+            ctx.fillRect(x-2, y+ry, 4, 16);
+            ctx.fillRect(x+w-2, y+ry, 4, 16);
+            ctx.fillStyle = "rgba(255,255,255,0.2)";
+            ctx.fillRect(x-1, y+ry+wheelPhase, 2, 4);
+            ctx.fillRect(x+w-1, y+ry+wheelPhase, 2, 4);
+            ctx.fillStyle = "#000";
         });
+
+        // Hafif parlaklık
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(x+2, y+2, w-4, h/2);
     }
 
     function drawRoad() {
@@ -162,7 +172,6 @@
         }
     }
 
-    // --- OYUN MANTIĞI ---
     function update() {
         if (!gameRunning || paused) { updateSound(); if(gameRunning) requestAnimationFrame(update); return; }
         frame++; ctx.clearRect(0,0,canvas.width, canvas.height);
@@ -196,7 +205,6 @@
         requestAnimationFrame(update);
     }
 
-    // --- KONTROLLER ---
     function setupInput(id, fn) {
         const el = document.getElementById(id);
         el.addEventListener("touchstart", (e)=>{ e.preventDefault(); fn(); });

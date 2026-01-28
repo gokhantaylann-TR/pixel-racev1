@@ -1,92 +1,174 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pixel-Racer Gerçek Arabalar</title>
-<style>
-html,body{margin:0;padding:0;overflow:hidden;background:#222;font-family:monospace;}
-#gameContainer{position:relative;width:800px;height:400px;margin:auto;overflow:hidden;background:#111;border:5px solid #0ff;box-shadow:0 0 20px #0ff;}
-canvas{display:block;image-rendering:pixelated;}
-#controls{position:absolute;bottom:10px;width:100%;display:flex;justify-content:center;gap:10px;}
-.btn{width:50px;height:50px;background:#333;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;user-select:none;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Bit Retro Racer</title>
+    <style>
+        body {
+            margin: 0;
+            background: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+        canvas {
+            border: 4px solid #fff;
+            background: #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .ui {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
-<div id="gameContainer">
-<canvas id="game" width="800" height="400"></canvas>
-<div id="controls">
-<div class="btn" id="left">◀</div>
-<div class="btn" id="right">▶</div>
-</div>
-</div>
+
+    <div class="ui">
+        <h1 id="score">SKOR: 0</h1>
+        <p id="msg">BAŞLAMAK İÇİN TIKLA (Yön Tuşlarını Kullan)</p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
 
 <script>
-// ---------- CANVAS ----------
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-const WIDTH=canvas.width, HEIGHT=canvas.height;
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreElement = document.getElementById("score");
+    const msgElement = document.getElementById("msg");
 
-// ---------- INPUT ----------
-let keys={};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
-["left","right"].forEach(id=>{
-  document.getElementById(id).ontouchstart=()=>keys[id]=true;
-  document.getElementById(id).ontouchend=()=>keys[id]=false;
-});
+    canvas.width = 400;
+    canvas.height = 600;
 
-// ---------- ARABALAR ----------
-const carSprites = {
-  sport: new Image(),
-  classic: new Image(),
-  suv: new Image()
-};
+    // Oyun Değişkenleri
+    let gameRunning = false;
+    let score = 0;
+    let speed = 5;
+    let frame = 0;
 
-// Github raw URL’leri ile değiştir
-carSprites.sport.src = "https://raw.githubusercontent.com/kullaniciAdi/repoAdi/main/images/cars/sport.png";
-carSprites.classic.src = "https://raw.githubusercontent.com/kullaniciAdi/repoAdi/main/images/cars/classic.png";
-carSprites.suv.src = "https://raw.githubusercontent.com/kullaniciAdi/repoAdi/main/images/cars/suv.png";
+    const player = {
+        x: canvas.width / 2 - 20,
+        y: canvas.height - 100,
+        w: 40,
+        h: 70,
+        color: "#e74c3c"
+    };
 
-// ---------- OYUN DURUMU ----------
-let player = {x: WIDTH/2 - 32, y: HEIGHT-80, width:64, height:32, model:"sport", speed:5};
-let obstacles = [
-  {x:200, y:300, width:64, height:32, model:"classic"},
-  {x:500, y:250, width:64, height:32, model:"suv"}
-];
+    let enemies = [];
+    let keys = {};
 
-// ---------- OYUN DÖNGÜSÜ ----------
-function update(){
-  // hareket
-  if(keys["left"]) player.x -= player.speed;
-  if(keys["right"]) player.x += player.speed;
+    // Kontroller
+    window.addEventListener("keydown", e => keys[e.code] = true);
+    window.addEventListener("keyup", e => keys[e.code] = false);
+    canvas.addEventListener("click", () => {
+        if (!gameRunning) resetGame();
+    });
 
-  // sınırlar
-  if(player.x<0) player.x=0;
-  if(player.x+player.width>WIDTH) player.x=WIDTH-player.width;
+    function resetGame() {
+        score = 0;
+        speed = 5;
+        enemies = [];
+        player.x = canvas.width / 2 - 20;
+        gameRunning = true;
+        msgElement.innerText = "";
+        update();
+    }
 
-  draw();
-  requestAnimationFrame(update);
-}
+    function spawnEnemy() {
+        if (frame % 60 === 0) {
+            const x = Math.random() * (canvas.width - 40);
+            enemies.push({ x, y: -70, w: 40, h: 70, color: "#3498db" });
+        }
+    }
 
-// ---------- ÇİZİM ----------
-function draw(){
-  ctx.clearRect(0,0,WIDTH,HEIGHT);
+    function drawRect(obj) {
+        // 8-bit gövde
+        ctx.fillStyle = obj.color;
+        ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+        
+        // Tekerlekler (Siyah küçük kareler)
+        ctx.fillStyle = "#000";
+        ctx.fillRect(obj.x - 5, obj.y + 10, 5, 15);
+        ctx.fillRect(obj.x + obj.w, obj.y + 10, 5, 15);
+        ctx.fillRect(obj.x - 5, obj.y + 45, 5, 15);
+        ctx.fillRect(obj.x + obj.w, obj.y + 45, 5, 15);
 
-  // yol
-  ctx.fillStyle="#333";
-  ctx.fillRect(0,HEIGHT-100,WIDTH,100);
+        // Cam
+        ctx.fillStyle = "#ecf0f1";
+        ctx.fillRect(obj.x + 5, obj.y + 15, obj.w - 10, 15);
+    }
 
-  // player araba
-  ctx.drawImage(carSprites[player.model],player.x,player.y,player.width,player.height);
+    function drawRoad() {
+        ctx.fillStyle = "#555";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Şerit çizgileri
+        ctx.strokeStyle = "#fff";
+        ctx.setLineDash([20, 20]);
+        ctx.lineDashOffset = -frame * speed;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, 0);
+        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.stroke();
+    }
 
-  // engeller
-  obstacles.forEach(o=>{
-    ctx.drawImage(carSprites[o.model],o.x,o.y,o.width,o.height);
-  });
-}
+    function update() {
+        if (!gameRunning) return;
 
-update();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        frame++;
+
+        drawRoad();
+
+        // Oyuncu Hareketi
+        if (keys["ArrowLeft"] && player.x > 0) player.x -= 7;
+        if (keys["ArrowRight"] && player.x < canvas.width - player.w) player.x += 7;
+
+        drawRect(player);
+
+        // Düşman Arabalar
+        spawnEnemy();
+        enemies.forEach((enemy, index) => {
+            enemy.y += speed;
+            drawRect(enemy);
+
+            // Çarpışma Kontrolü
+            if (
+                player.x < enemy.x + enemy.w &&
+                player.x + player.w > enemy.x &&
+                player.y < enemy.y + enemy.h &&
+                player.y + player.h > enemy.y
+            ) {
+                gameOver();
+            }
+
+            // Skor ve Temizlik
+            if (enemy.y > canvas.height) {
+                enemies.splice(index, 1);
+                score++;
+                scoreElement.innerText = `SKOR: ${score}`;
+                if (score % 10 === 0) speed += 0.2; // Zorluk artışı
+            }
+        });
+
+        requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+        gameRunning = false;
+        msgElement.innerText = "OYUN BİTTİ! TEKRARLAMAK İÇİN TIKLA";
+    }
+
+    // İlk kareyi çiz
+    drawRoad();
+    drawRect(player);
+
 </script>
 </body>
 </html>

@@ -4,226 +4,226 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>8-Bit Retro Racer</title>
-
 <style>
-body{
-    margin:0;
-    background:#222;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    font-family:Courier New, monospace;
-    color:#fff;
+body {
+    margin: 0;
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: white;
+    overflow: hidden;
 }
-.game-wrapper{position:relative;}
-canvas{border:4px solid #fff;display:block;background:#333}
-
-/* UI */
-.ui{
-    position:absolute;
-    top:20px;
-    width:100%;
-    text-align:center;
-    pointer-events:none;
+.game-wrapper { position: relative; }
+canvas { border: 4px solid #fff; background: #444; display: block; }
+.ui {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    text-align: center;
+    pointer-events: none;
 }
-.brand{
-    position:absolute;
-    top:15px;
-    right:20px;
-    text-align:center;
+.brand {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    text-align: center;
 }
-.brand .title{font-size:11px}
-.brand .author{font-size:10px;opacity:.8}
+.brand .title { font-size: 11px; }
+.brand .author { font-size: 10px; opacity: 0.8; }
+/* ALT TUŞLAR */
+.controls {
+    position: absolute;
+    bottom: -115px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 25px;
+}
+.control-group { display: flex; gap: 10px; }
+.btn {
+    width: 56px;
+    height: 56px;
+    border: 3px solid #fff;
+    background: #333;
+    color: #fff;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+.btn:active { background: #666; }
 </style>
 </head>
-
 <body>
 <div class="game-wrapper">
     <div class="ui">
         <h1 id="score">SKOR: 0</h1>
-        <p id="msg">TIKLA → BAŞLA | P: PAUSE | SHIFT: NITRO</p>
+        <p id="msg">TIKLA → BAŞLA | P: PAUSE</p>
     </div>
-
     <div class="brand">
         <div class="title">MAT GAMES</div>
         <div class="author">by gokhantaylan</div>
     </div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
 
-    <canvas id="c" width="400" height="600"></canvas>
+    <div class="controls">
+        <div class="control-group">
+            <div class="btn" data-key="ArrowLeft">◀</div>
+            <div class="btn" data-key="ArrowRight">▶</div>
+        </div>
+        <div class="control-group">
+            <div class="btn" data-key="ArrowUp">▲</div>
+            <div class="btn" data-key="ArrowDown">▼</div>
+        </div>
+    </div>
 </div>
 
 <script>
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreElement = document.getElementById("score");
+const msgElement = document.getElementById("msg");
 
-let frame=0, score=0, speed=4;
-let running=false, paused=false, nitro=false;
-let keys={};
+let gameRunning = false;
+let paused = false;
+let score = 0;
+let speed = 5;
+let frame = 0;
 
 const ROAD = {
-    width:220,
-    lanes:3,
-    curveAmp:60,
-    curveFreq:0.002
+    width: 220,
+    lanes: 3,
+    curveAmp: 60,
+    curveFreq: 0.002
 };
 
 const player = {
-    lane:1,
-    y:460,
-    w:40,
-    h:70,
-    color:"#e74c3c"
+    lane: 1,
+    y: 480,
+    w: 40,
+    h: 70,
+    color: "#e74c3c"
 };
 
-let enemies=[];
-let objects=[];
+let enemies = [];
+let keys = {};
 
 /* INPUT */
-window.addEventListener("keydown",e=>{
-    keys[e.code]=true;
-    if(e.code==="KeyP") paused=!paused;
-    if(e.code==="ShiftLeft") nitro=true;
+window.addEventListener("keydown", e => {
+    keys[e.code] = true;
+    if(e.code === "KeyP") paused = !paused;
 });
-window.addEventListener("keyup",e=>{
-    keys[e.code]=false;
-    if(e.code==="ShiftLeft") nitro=false;
+window.addEventListener("keyup", e => keys[e.code] = false);
+document.querySelectorAll(".btn").forEach(btn => {
+    const key = btn.dataset.key;
+    btn.addEventListener("mousedown", () => keys[key]=true);
+    btn.addEventListener("mouseup", () => keys[key]=false);
+    btn.addEventListener("touchstart", () => keys[key]=true);
+    btn.addEventListener("touchend", () => keys[key]=false);
 });
+canvas.addEventListener("click", () => { if(!gameRunning){ resetGame(); gameRunning=true; update(); }});
 
-c.addEventListener("click",()=>{
-    if(!running){ reset(); running=true; loop(); }
-});
-
-function reset(){
-    frame=0; score=0; speed=4;
-    enemies=[]; objects=[];
-    player.lane=1;
-    paused=false;
+/* RESET */
+function resetGame(){
+    score = 0; speed = 5; frame = 0;
+    enemies = [];
+    player.lane = 1;
+    paused = false;
+    msgElement.innerText = "";
+    scoreElement.innerText = "SKOR: 0";
 }
 
-/* CORE MATH */
-function roadCenter(y){
-    return c.width/2 + Math.sin(frame*ROAD.curveFreq + y*0.01)*ROAD.curveAmp;
+/* ROAD HELPER */
+function roadCenter(){
+    return canvas.width/2 + Math.sin(frame*ROAD.curveFreq)*ROAD.curveAmp;
+}
+function laneX(lane){
+    const laneWidth = ROAD.width / ROAD.lanes;
+    return roadCenter() - ROAD.width/2 + laneWidth*(lane+0.5) - player.w/2;
 }
 
-function laneX(lane,y){
-    const laneW = ROAD.width/ROAD.lanes;
-    return roadCenter(y) - ROAD.width/2 + laneW*(lane+0.5);
+/* DRAW CAR */
+function drawCar(obj){
+    ctx.fillStyle=obj.color;
+    ctx.fillRect(obj.x,obj.y,obj.w,obj.h);
+    ctx.fillStyle="#000";
+    ctx.fillRect(obj.x-5,obj.y+10,5,15);
+    ctx.fillRect(obj.x+obj.w,obj.y+10,5,15);
+    ctx.fillRect(obj.x-5,obj.y+45,5,15);
+    ctx.fillRect(obj.x+obj.w,obj.y+45,5,15);
+    ctx.fillStyle="#ecf0f1";
+    ctx.fillRect(obj.x+5,obj.y+15,obj.w-10,18);
 }
 
 /* DRAW ROAD */
 function drawRoad(){
-    // grass
-    ctx.fillStyle="#2ecc71";
-    ctx.fillRect(0,0,c.width,c.height);
-
-    // road
-    ctx.fillStyle="#555";
-    for(let y=0;y<c.height;y++){
-        const scale=y/c.height;
-        const w=ROAD.width*(0.5+scale);
-        ctx.fillRect(roadCenter(y)-w/2,y,w,1);
-    }
-
-    // lane lines
-    ctx.strokeStyle="#fff";
-    for(let l=1;l<ROAD.lanes;l++){
+    ctx.fillStyle="#2ecc71"; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="#555"; ctx.fillRect(roadCenter()-ROAD.width/2,0,ROAD.width,canvas.height);
+    ctx.strokeStyle="#fff"; ctx.setLineDash([20,20]);
+    for(let i=1;i<ROAD.lanes;i++){
+        const x = roadCenter()-ROAD.width/2 + i*(ROAD.width/ROAD.lanes);
         ctx.beginPath();
-        for(let y=0;y<c.height;y+=10){
-            ctx.lineTo(
-                roadCenter(y)-ROAD.width/2 + (ROAD.width/ROAD.lanes)*l,
-                y
-            );
-        }
+        ctx.moveTo(x,0);
+        ctx.lineTo(x,canvas.height);
         ctx.stroke();
     }
 }
 
-/* CAR */
-function drawCar(x,y,scale,color){
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.scale(scale,scale);
-    ctx.fillStyle=color;
-    ctx.fillRect(-20,-35,40,70);
-    ctx.fillStyle="#000";
-    ctx.fillRect(-25,-25,5,15);
-    ctx.fillRect(20,-25,5,15);
-    ctx.restore();
-}
-
-/* SPAWN */
+/* SPAWN ENEMY */
 function spawnEnemy(){
-    if(frame%80===0){
-        enemies.push({
-            lane:Math.floor(Math.random()*3),
-            y:-100
-        });
-    }
-    if(frame%100===0){
-        objects.push({
-            side:Math.random()<.5?-1:1,
-            y:-100
-        });
+    if(frame % 60 === 0){
+        enemies.push({lane:Math.floor(Math.random()*3),y:-70,w:40,h:70,color:"#3498db"});
     }
 }
 
-/* LOOP */
-function loop(){
-    if(!running||paused)return;
+/* UPDATE */
+function update(){
+    if(!gameRunning || paused) return;
     frame++;
-    const curSpeed = nitro ? speed*1.8 : speed;
-
-    // motion blur
-    ctx.fillStyle="rgba(0,0,0,0.2)";
-    ctx.fillRect(0,0,c.width,c.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
     drawRoad();
 
-    // player input
     if(keys.ArrowLeft && player.lane>0) player.lane--;
     if(keys.ArrowRight && player.lane<2) player.lane++;
 
-    // player
-    drawCar(
-        laneX(player.lane,player.y),
-        player.y,
-        1,
-        player.color
-    );
+    player.x = laneX(player.lane);
+    drawCar(player);
 
     spawnEnemy();
-
-    // enemies
     enemies.forEach((e,i)=>{
-        e.y+=curSpeed;
-        const scale = e.y/c.height;
-        drawCar(
-            laneX(e.lane,e.y),
-            e.y,
-            scale,
-            "#3498db"
-        );
+        e.y += speed;
+        e.x = laneX(e.lane);
+        drawCar(e);
 
-        if(e.y>c.height){
+        if(player.x<e.x+e.w && player.x+player.w>e.x &&
+           player.y<e.y+e.h && player.y+player.h>e.y){
+            gameOver();
+        }
+
+        if(e.y>canvas.height){
             enemies.splice(i,1);
-            score++;
-            document.getElementById("score").innerText="SKOR: "+score;
+            score++; scoreElement.innerText="SKOR: "+score;
+            if(score%10===0) speed+=0.2;
         }
     });
 
-    // objects
-    objects.forEach((o,i)=>{
-        o.y+=curSpeed*1.2;
-        const scale=o.y/c.height;
-        const x=roadCenter(o.y)+(ROAD.width/2+20)*o.side;
-        ctx.fillStyle="#2c3e50";
-        ctx.fillRect(x,o.y,6,30*scale);
-        if(o.y>c.height) objects.splice(i,1);
-    });
-
-    requestAnimationFrame(loop);
+    requestAnimationFrame(update);
 }
+
+function gameOver(){
+    gameRunning=false;
+    msgElement.innerText="OYUN BİTTİ! TIKLA TEKRAR";
+}
+
+/* INITIAL DRAW */
+drawRoad();
+player.x = laneX(player.lane);
+drawCar(player);
 
 </script>
 </body>

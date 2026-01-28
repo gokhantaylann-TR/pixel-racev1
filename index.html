@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAT GAMES | 8-Bit Racer</title>
+    <title>MAT GAMES | Road Fighter Edition</title>
     <style>
         body { 
             margin: 0; background: #1a1a1a; 
@@ -66,11 +66,9 @@
     let gameRunning = false, paused = false, score = 0, speed = 7, frame = 0;
     const ROAD_WIDTH = 260, LANES = 3, LANE_W = ROAD_WIDTH / LANES;
 
-    // Oyuncu Aracı (GS Renkleri: Kırmızı Gövde, Sarı Detay)
-    const player = { lane: 1, targetX: 0, currentX: 0, y: 380, w: 44, h: 75, color: "#e74c3c" };
+    const player = { lane: 1, targetX: 0, currentX: 0, y: 380, w: 40, h: 70, color: "#e74c3c" };
     let enemies = [];
 
-    // --- 8-BIT SES MOTORU ---
     let audioCtx, oscillator, gainNode;
 
     function initEngineSound() {
@@ -83,12 +81,11 @@
             gainNode.connect(audioCtx.destination);
             gainNode.gain.value = 0.04; 
             oscillator.start();
-        } catch(e) { console.log("Ses başlatılamadı."); }
+        } catch(e) {}
     }
 
     function updateEnginePitch() {
         if (oscillator && !paused && gameRunning) {
-            // Hız arttıkça ses incelir (RPM artışı efekti)
             oscillator.frequency.setTargetAtTime(45 + (speed * 4), audioCtx.currentTime, 0.1);
             gainNode.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.1);
         } else if (gainNode) {
@@ -96,7 +93,6 @@
         }
     }
 
-    // --- KONTROLLER ---
     window.addEventListener("keydown", e => {
         if (!gameRunning) return;
         if (e.code === "KeyP") togglePause();
@@ -143,45 +139,58 @@
 
     function getLaneX(lane) { return (canvas.width / 2 - ROAD_WIDTH / 2) + (lane * LANE_W) + (LANE_W / 2 - player.w / 2); }
 
+    // --- ROAD FIGHTER STİLİ ARABA ÇİZİMİ ---
     function drawCar(x, y, color, isPlayer = false) {
-        // Gövde
+        const w = player.w;
+        const h = player.h;
+
+        // Gövde (Sportif kavisli)
         ctx.fillStyle = color;
-        ctx.fillRect(x, y, player.w, player.h);
-        
-        // GS Sarısı Şerit
-        if(isPlayer) { 
-            ctx.fillStyle = "#f1c40f"; 
-            ctx.fillRect(x + 5, y + 8, player.w - 10, 6); 
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.2, y); // Burun sol
+        ctx.lineTo(x + w * 0.8, y); // Burun sağ
+        ctx.lineTo(x + w, y + h * 0.85); // Arka sağ
+        ctx.lineTo(x, y + h * 0.85); // Arka sol
+        ctx.closePath();
+        ctx.fill();
+
+        // Rüzgarlık (Spoiler)
+        ctx.fillStyle = "#222";
+        ctx.fillRect(x - 2, y + h * 0.85, w + 4, 8);
+
+        // Kokpit (Cam)
+        ctx.fillStyle = "rgba(100, 200, 255, 0.9)";
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.25, y + h * 0.25);
+        ctx.lineTo(x + w * 0.75, y + h * 0.25);
+        ctx.lineTo(x + w * 0.85, y + h * 0.5);
+        ctx.lineTo(x + w * 0.15, y + h * 0.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // GS Detayı (Kaput üstü sarı şerit)
+        if(isPlayer) {
+            ctx.fillStyle = "#f1c40f";
+            ctx.fillRect(x + w * 0.45, y + 2, w * 0.1, h * 0.2);
         }
 
-        // Tekerlekler
+        // Tekerlekler (Gövdeye gömülü)
         ctx.fillStyle = "#111";
-        [12, 52].forEach(wheelY => {
-            ctx.fillRect(x - 5, y + wheelY, 6, 16);
-            ctx.fillRect(x + player.w - 1, y + wheelY, 6, 16);
+        [h * 0.15, h * 0.6].forEach(wheelY => {
+            ctx.fillRect(x - 3, y + wheelY, 4, 15);
+            ctx.fillRect(x + w - 1, y + wheelY, 4, 15);
         });
-
-        // Cam
-        ctx.fillStyle = "rgba(200,230,255,0.8)";
-        ctx.fillRect(x + 6, y + 18, player.w - 12, 18);
     }
 
     function drawRoad() {
-        // Yol kenarı (Çimen)
         ctx.fillStyle = "#27ae60"; ctx.fillRect(0, 0, canvas.width, canvas.height); 
-        
         const roadX = canvas.width / 2 - ROAD_WIDTH / 2;
-        // Asfalt
         ctx.fillStyle = "#34495e"; ctx.fillRect(roadX, 0, ROAD_WIDTH, canvas.height); 
 
-        // Şerit Çizgileri
-        ctx.strokeStyle = "#ffffff"; ctx.setLineDash([30, 30]); ctx.lineDashOffset = -frame * speed;
+        ctx.strokeStyle = "#ffffff"; ctx.setLineDash([40, 40]); ctx.lineDashOffset = -frame * speed;
         ctx.lineWidth = 4;
         for (let i = 1; i < LANES; i++) {
-            ctx.beginPath(); 
-            ctx.moveTo(roadX + i * LANE_W, 0); 
-            ctx.lineTo(roadX + i * LANE_W, canvas.height); 
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(roadX + i * LANE_W, 0); ctx.lineTo(roadX + i * LANE_W, canvas.height); ctx.stroke();
         }
     }
 
@@ -196,13 +205,11 @@
         drawRoad();
         updateEnginePitch();
 
-        // Yumuşak Geçiş (Lerp)
         player.targetX = getLaneX(player.lane);
         player.currentX += (player.targetX - player.currentX) * 0.18;
         drawCar(player.currentX, player.y, player.color, true);
 
-        // Engel Oluşturma
-        if (frame % Math.max(30, 60 - Math.floor(speed)) === 0) {
+        if (frame % Math.max(25, 55 - Math.floor(speed)) === 0) {
             enemies.push({ 
                 lane: Math.floor(Math.random() * 3), 
                 y: -100, 
@@ -215,13 +222,11 @@
             const enX = getLaneX(en.lane);
             drawCar(enX, en.y, en.color);
 
-            // Çarpışma Testi
-            if (player.currentX < enX + player.w - 6 && player.currentX + player.w - 6 > enX &&
-                player.y < en.y + player.h - 6 && player.y + player.h - 6 > en.y) {
+            if (player.currentX < enX + player.w - 5 && player.currentX + player.w - 5 > enX &&
+                player.y < en.y + player.h - 5 && player.y + player.h - 5 > en.y) {
                 gameOver();
             }
 
-            // Temizlik ve Skor
             if (en.y > canvas.height) {
                 enemies.splice(index, 1);
                 score++; scoreElement.innerText = `SKOR: ${score}`;
@@ -235,10 +240,9 @@
     function gameOver() {
         gameRunning = false;
         msgElement.style.display = "block";
-        msgElement.innerText = "KAZA YAPTIN! TEKRAR DENE";
+        msgElement.innerText = "EYVAH! PİSTTEN ÇIKTIN";
     }
 
-    // İlk Çizim
     drawRoad();
     drawCar(getLaneX(1), player.y, player.color, true);
 </script>

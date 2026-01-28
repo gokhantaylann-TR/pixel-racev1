@@ -18,9 +18,7 @@ body {
     overflow: hidden;
 }
 
-.game-wrapper {
-    position: relative;
-}
+.game-wrapper { position: relative; }
 
 canvas {
     border: 4px solid #fff;
@@ -28,6 +26,7 @@ canvas {
     display: block;
 }
 
+/* UI */
 .ui {
     position: absolute;
     top: 20px;
@@ -43,28 +42,22 @@ canvas {
     text-align: center;
     pointer-events: none;
 }
-
 .brand .title { font-size: 11px; }
-.brand .author { font-size: 10px; opacity: 0.8; }
+.brand .author { font-size: 10px; opacity: .8; }
 
-/* ===== ALT KONTROLLER ===== */
+/* ALT KONTROLLER */
 .controls {
     position: absolute;
-    bottom: -120px;
+    bottom: -115px;
     width: 100%;
     display: flex;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 25px;
 }
-
-.control-group {
-    display: flex;
-    gap: 10px;
-}
-
+.control-group { display: flex; gap: 10px; }
 .btn {
-    width: 55px;
-    height: 55px;
+    width: 56px;
+    height: 56px;
     border: 3px solid #fff;
     background: #333;
     color: #fff;
@@ -74,10 +67,7 @@ canvas {
     justify-content: center;
     user-select: none;
 }
-
-.btn:active {
-    background: #666;
-}
+.btn:active { background: #666; }
 </style>
 </head>
 
@@ -87,7 +77,7 @@ canvas {
 
     <div class="ui">
         <h1 id="score">SKOR: 0</h1>
-        <p id="msg">BAŞLAMAK İÇİN TIKLA</p>
+        <p id="msg">BAŞLAMAK İÇİN TIKLA<br>P: PAUSE</p>
     </div>
 
     <div class="brand">
@@ -97,7 +87,6 @@ canvas {
 
     <canvas id="gameCanvas" width="400" height="600"></canvas>
 
-    <!-- ALT YÖN TUŞLARI -->
     <div class="controls">
         <div class="control-group">
             <div class="btn" data-key="ArrowLeft">◀</div>
@@ -124,8 +113,8 @@ let speed = 5;
 let frame = 0;
 
 const player = {
-    x: 180,
-    y: 480,
+    x: canvas.width / 2 - 20,
+    y: canvas.height - 110,
     w: 40,
     h: 70,
     color: "#e74c3c"
@@ -134,7 +123,7 @@ const player = {
 let enemies = [];
 let keys = {};
 
-// KLAVYE
+/* INPUT */
 window.addEventListener("keydown", e => {
     keys[e.code] = true;
     if (e.code === "KeyP" && gameRunning) {
@@ -145,29 +134,27 @@ window.addEventListener("keydown", e => {
 });
 window.addEventListener("keyup", e => keys[e.code] = false);
 
-// DOKUNMATİK TUŞLAR
 document.querySelectorAll(".btn").forEach(btn => {
     const key = btn.dataset.key;
-
-    btn.addEventListener("touchstart", () => keys[key] = true);
-    btn.addEventListener("touchend", () => keys[key] = false);
     btn.addEventListener("mousedown", () => keys[key] = true);
     btn.addEventListener("mouseup", () => keys[key] = false);
+    btn.addEventListener("touchstart", () => keys[key] = true);
+    btn.addEventListener("touchend", () => keys[key] = false);
 });
 
-// OYUN BAŞLAT
 canvas.addEventListener("click", () => {
     if (!gameRunning) resetGame();
 });
 
+/* GAME */
 function resetGame() {
     score = 0;
     speed = 5;
     frame = 0;
     enemies = [];
     paused = false;
-    player.x = 180;
-    player.y = 480;
+    player.x = canvas.width / 2 - 20;
+    player.y = canvas.height - 110;
     gameRunning = true;
     msgElement.innerText = "";
     update();
@@ -175,23 +162,60 @@ function resetGame() {
 
 function spawnEnemy() {
     if (frame % 60 === 0) {
-        const lane = Math.floor(Math.random() * 3);
-        const x = lane * (canvas.width / 3) + 45;
+        const x = Math.random() * (canvas.width - 40);
         enemies.push({ x, y: -80, w: 40, h: 70, color: "#3498db" });
     }
 }
 
+/* ARABA */
 function drawCar(o) {
     ctx.fillStyle = o.color;
     ctx.fillRect(o.x, o.y, o.w, o.h);
+
     ctx.fillStyle = "#000";
     ctx.fillRect(o.x - 5, o.y + 10, 5, 15);
     ctx.fillRect(o.x + o.w, o.y + 10, 5, 15);
+    ctx.fillRect(o.x - 5, o.y + 45, 5, 15);
+    ctx.fillRect(o.x + o.w, o.y + 45, 5, 15);
+
+    ctx.fillStyle = "#ecf0f1";
+    ctx.fillRect(o.x + 5, o.y + 15, o.w - 10, 18);
 }
 
+/* 🌿 YOL + PERSPEKTİF */
 function drawRoad() {
-    ctx.fillStyle = "#555";
+    // ÇİMEN
+    ctx.fillStyle = "#2ecc71";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // YOL
+    ctx.fillStyle = "#555";
+    ctx.fillRect(60, 0, canvas.width - 120, canvas.height);
+
+    // PERSPEKTİF ŞERİTLER
+    ctx.strokeStyle = "#fff";
+    ctx.setLineDash([20, 20]);
+
+    for (let i = 0; i < 30; i++) {
+        const y = canvas.height - (i * i * 0.6 + frame * speed) % canvas.height;
+        const scale = y / canvas.height;
+        ctx.lineWidth = 1 + scale * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, y);
+        ctx.lineTo(canvas.width / 2, y - 30 * scale);
+        ctx.stroke();
+    }
+
+    // BARİYER DİREKLERİ
+    for (let i = 0; i < 10; i++) {
+        const y = canvas.height - (i * 120 + frame * speed * 1.5) % canvas.height;
+        const h = 20 + (y / canvas.height) * 30;
+
+        ctx.fillStyle = "#f1c40f";
+        ctx.fillRect(50, y, 6, h);
+        ctx.fillRect(canvas.width - 56, y, 6, h);
+    }
 }
 
 function update() {
@@ -199,16 +223,17 @@ function update() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
+
     drawRoad();
 
-    if (keys.ArrowLeft && player.x > 0) player.x -= 6;
-    if (keys.ArrowRight && player.x < canvas.width - player.w) player.x += 6;
-    if (keys.ArrowUp && player.y > 0) player.y -= 5;
-    if (keys.ArrowDown && player.y < canvas.height - player.h) player.y += 5;
+    if (keys.ArrowLeft && player.x > 60) player.x -= 7;
+    if (keys.ArrowRight && player.x < canvas.width - player.w - 60) player.x += 7;
+    if (keys.ArrowUp && player.y > 0) player.y -= 6;
+    if (keys.ArrowDown && player.y < canvas.height - player.h) player.y += 6;
 
     drawCar(player);
-    spawnEnemy();
 
+    spawnEnemy();
     enemies.forEach((e, i) => {
         e.y += speed;
         drawCar(e);
@@ -224,6 +249,7 @@ function update() {
             enemies.splice(i, 1);
             score++;
             scoreElement.innerText = "SKOR: " + score;
+            if (score % 10 === 0) speed += 0.3;
         }
     });
 
@@ -232,7 +258,7 @@ function update() {
 
 function gameOver() {
     gameRunning = false;
-    msgElement.innerText = "OYUN BİTTİ - TIKLA";
+    msgElement.innerText = "OYUN BİTTİ\nTEKRAR OYNAMAK İÇİN TIKLA";
 }
 
 drawRoad();

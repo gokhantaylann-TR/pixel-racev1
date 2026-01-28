@@ -92,7 +92,7 @@
     function drawPixelCar(car) {
         const { x, y, w, h, model } = car;
         
-        // Gölge (Yere düşen)
+        // Gölge
         ctx.fillStyle = "rgba(0,0,0,0.4)";
         ctx.fillRect(x + 4, y + 10, w, h);
 
@@ -101,58 +101,44 @@
             ctx.fillRect(x + rx, y + ry, rw, rh);
         };
 
-        if (model === MODELS.SKYLINE) { // R34 GT-R
-            // Gövde (Gümüş tonları)
-            drawPart("#95a5a6", 2, 0, w-4, h); // Ana
-            drawPart("#bdc3c7", 4, 2, w-8, h-10); // Işık
-            // Mavi Şeritler (İkonik)
+        if (model === MODELS.SKYLINE) {
+            drawPart("#95a5a6", 2, 0, w-4, h);
+            drawPart("#bdc3c7", 4, 2, w-8, h-10);
             drawPart("#2980b9", 10, 0, 5, h-4);
             drawPart("#2980b9", w-15, 0, 5, h-4);
-            // Camlar
-            drawPart("#2c3e50", 6, 20, w-12, 18); // Ön
-            drawPart("#34495e", 8, 22, w-16, 12); // İç derinlik
-            // Arka Kanat
-            drawPart("#7f8c8d", 0, h-8, w, 5); 
+            drawPart("#2c3e50", 6, 20, w-12, 18);
+            drawPart("#34495e", 8, 22, w-16, 12);
+            drawPart("#7f8c8d", 0, h-8, w, 5);
             drawPart("#2980b9", 0, h-10, 4, 8); drawPart("#2980b9", w-4, h-10, 4, 8);
-            // Stop Lambaları (4'lü ikonik yuvarlak)
             ["#e74c3c", "#c0392b"].forEach((c, i) => {
                 drawPart(c, 6, h-4, 4, 3); drawPart(c, 14, h-4, 4, 3);
                 drawPart(c, w-10, h-4, 4, 3); drawPart(c, w-18, h-4, 4, 3);
             });
         } 
-        else if (model === MODELS.CHARGER) { // Dom'un Charger'ı
-            drawPart("#111", 0, 0, w, h); // Ana siyah
-            drawPart("#2c3e50", 4, 4, w-8, h-15); // Kaput parlaması
-            // Hava Girişi (Blower)
+        else if (model === MODELS.CHARGER) {
+            drawPart("#111", 0, 0, w, h);
+            drawPart("#2c3e50", 4, 4, w-8, h-15);
             drawPart("#bdc3c7", w/2-8, 10, 16, 12);
             drawPart("#7f8c8d", w/2-6, 8, 12, 4);
-            // Ön Izgara Parlaması
             drawPart("#ecf0f1", 4, 2, w-8, 2);
-            // Arka Tek Parça Stop
             drawPart("#e74c3c", 4, h-4, w-8, 3);
         }
-        else if (model === MODELS.SUPRA) { // Brian'ın Turuncusu
-            drawPart("#e67e22", 2, 0, w-4, h); // Turuncu gövde
-            drawPart("#f39c12", 4, 5, w-8, h-20); // Üst ton
-            // Yan Grafikler
+        else if (model === MODELS.SUPRA) {
+            drawPart("#e67e22", 2, 0, w-4, h);
+            drawPart("#f39c12", 4, 5, w-8, h-20);
             drawPart("#2c3e50", 2, 35, 4, 25); drawPart("#2c3e50", w-6, 35, 4, 25);
-            // Camlar
             drawPart("#111", 6, 18, w-12, 15);
-            // Dev Kavisli Kanat
             drawPart("#d35400", 0, h-12, w, 6);
             drawPart("#d35400", 2, h-16, 4, 6); drawPart("#d35400", w-6, h-16, 4, 6);
         }
-        else if (model === MODELS.S2000) { // Suki'nin Pembesi
+        else if (model === MODELS.S2000) {
             drawPart("#fd79a8", 2, 0, w-4, h);
             drawPart("#f8a5c2", 6, 4, w-12, h-10);
-            // Üstü Açık İç Mekan
             drawPart("#111", 6, 25, w-12, 25);
-            drawPart("#333", 8, 28, w-16, 15); // Koltuk başları
-            // Ön Cam Çerçevesi
+            drawPart("#333", 8, 28, w-16, 15);
             drawPart("#fff", 6, 22, w-12, 3);
         }
 
-        // Tekerlekler (Tüm modeller için ortak ama gölgeli)
         ctx.fillStyle = "#000";
         [12, h-22].forEach(ty => { 
             ctx.fillRect(x-2, y+ty, 4, 16); ctx.fillRect(x+w-2, y+ty, 4, 16); 
@@ -160,22 +146,15 @@
     }
 
     function drawRoad() {
-        // Çevre
         ctx.fillStyle = "#111"; ctx.fillRect(0,0,canvas.width, canvas.height);
         const rX = canvas.width/2 - ROAD_W/2;
-        
-        // Asfalt Dokusu
         ctx.fillStyle = "#222"; ctx.fillRect(rX, 0, ROAD_W, canvas.height);
-        
-        // Yarış Bordürleri (Animasyonlu)
         const kH = 30;
         for(let i=-frame%(kH*2); i<canvas.height; i+=kH){
             ctx.fillStyle = (Math.floor((i+frame)/kH)%2===0) ? "#e74c3c" : "#fff";
             ctx.fillRect(rX-10, i, 10, kH);
             ctx.fillRect(rX+ROAD_W, i, 10, kH);
         }
-
-        // Hareketli Şeritler
         ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.setLineDash([40, 60]); 
         ctx.lineDashOffset = -frame * speed; ctx.lineWidth = 4;
         for(let i=1; i<LANES; i++){
@@ -186,16 +165,12 @@
     // --- OYUN MANTIĞI ---
     function update() {
         if (!gameRunning || paused) { updateSound(); if(gameRunning) requestAnimationFrame(update); return; }
-        
         frame++; ctx.clearRect(0,0,canvas.width, canvas.height);
         drawRoad(); updateSound();
-
-        // Oyuncu Hareketi (Lerp)
         player.targetX = (canvas.width/2 - ROAD_W/2) + (player.lane * LANE_W) + (LANE_W/2 - player.w/2);
         player.currentX += (player.targetX - player.currentX) * 0.2;
         drawPixelCar({ ...player, x: player.currentX });
 
-        // Düşman Üretimi
         if(frame % Math.max(25, 60 - Math.floor(speed)) === 0){
             enemies.push({ 
                 lane: Math.floor(Math.random()*LANES), 
@@ -209,7 +184,6 @@
             en.x = (canvas.width/2 - ROAD_W/2) + (en.lane * LANE_W) + (LANE_W/2 - en.w/2);
             drawPixelCar(en);
 
-            // Çarpışma
             if(player.currentX < en.x+en.w-10 && player.currentX+player.w-10 > en.x &&
                player.y < en.y+en.h-10 && player.y+player.h-10 > en.y) gameOver();
 
@@ -229,9 +203,15 @@
         el.addEventListener("mousedown", (e)=>{ e.preventDefault(); fn(); });
     }
     setupInput("btnLeft", () => { if(player.lane > 0) player.lane--; });
-    setupInput("btnRight", () => { if(player.lane < 2) player.lane--; /* wait, fixed: */ player.lane < 2 ? player.lane++ : null; });
-    setupInput("btnPause", () => { if(gameRunning) { paused = !paused; msgElement.style.display = paused ? "block" : "none"; msgElement.innerText = "PAUSED"; }});
-    
+    setupInput("btnRight", () => { if(player.lane < 2) player.lane++; });
+    setupInput("btnPause", () => { 
+        if(gameRunning) { 
+            paused = !paused; 
+            msgElement.style.display = paused ? "block" : "none"; 
+            msgElement.innerText = "PAUSED"; 
+        }
+    });
+
     window.addEventListener("keydown", (e) => {
         if(e.code === "ArrowLeft" && player.lane > 0) player.lane--;
         if(e.code === "ArrowRight" && player.lane < 2) player.lane++;
